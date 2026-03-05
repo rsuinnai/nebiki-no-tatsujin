@@ -1,0 +1,229 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
+import { supabase } from "@/src/lib/supabase";
+
+export default async function StorePage({ params }) {
+  // 既存コードはそのまま
+
+  return (
+    <>
+      {/* 既存UI */}
+      <LoginOnce />
+    </>
+  );
+}
+
+type Message = {
+  id: number;
+  store_id: number;
+  user_id: string | null;
+  name: string | null;
+  body: string;
+  created_at: string;
+};
+
+const makeUserId = (uid: string | null, date: string) => {
+  const d = new Date(date);
+  const day =
+    d.getFullYear().toString().slice(2) +
+    (d.getMonth() + 1).toString().padStart(2, "0") +
+    d.getDate().toString().padStart(2, "0");
+
+  if (!uid) return `${day}:legacy`;
+  return `${day}:${uid.slice(0, 6)}`;
+};
+
+export default function StoreBoardPage() {
+  const params = useParams();
+  const storeId = Number(params.storeId);
+
+  const [user, setUser] = useState<User | null>(null);
+  const [storeName, setStoreName] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [body, setBody] = useState("");
+  const [name, setName] = useState("");
+
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  /* Auth */
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ?? null);
+    });
+  }, []);
+  
+
+  /* 初期 + realtime */
+  useEffect(() => {
+    if (!storeId) return;
+
+    supabase
+      .from("stores")
+      .select("name")
+      .eq("id", storeId)
+      .single()
+      .then(({ data }) => {
+        if (data) setStoreName(data.name);
+      });
+
+    supabase
+      .from("board_posts")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("id")
+      .then(({ data }) => data && setMessages(data));
+
+    const ch = supabase
+      .channel(`store-board-${storeId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "board_posts",
+          filter: `store_id=eq.${storeId}`,
+        },
+        (payload) => {
+          setMessages((prev) =>
+            prev.some((m) => m.id === payload.new.id)
+              ? prev
+              : [...prev, payload.new as Message]
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "board_posts",
+        },
+        (payload) => {
+          setMessages((prev) =>
+            prev.filter((m) => m.id !== payload.old.id)
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [storeId]);
+
+  /* 送信 */
+  const sendMessage = async () => {
+    if (!body.trim() || !user) return;
+
+    const temp: Message = {
+      id: Date.now(),
+      store_id: storeId,
+      user_id: user.id,
+      name: name.trim() || null,
+      body,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, temp]);
+    setBody("");
+
+    const { error } = await supabase.from("board_posts").insert({
+      store_id: storeId,
+      user_id: user.id,
+      name: temp.name,
+      body: temp.body,
+    });
+
+    if (error) {
+      alert("投稿失敗");
+      console.error(error);
+      setMessages((prev) => prev.filter((m) => m.id !== temp.id));
+    } else {
+      requestAnimationFrame(() => {
+        boardRef.current?.scrollTo({
+          top: boardRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      });
+    }
+  };
+
+  const deleteMessage = async (id: number) => {
+    if (!confirm("削除しますか？")) return;
+    await supabase.from("board_posts").delete().eq("id", id);
+  };
+
+  return (
+    <main className="mx-auto flex h-screen max-w-3xl flex-col bg-white font-mono text-sm">
+      <header className="border-b px-4 py-2 text-lg font-bold">
+        {storeName || "店舗掲示板"}
+      </header>
+
+      <div ref={boardRef} className="flex-1 overflow-y-auto px-4 py-2">
+        {messages.map((m, i) => {
+          const resNo = i + 1;
+          const uid = makeUserId(m.user_id, m.created_at);
+          const canDelete = user?.id === m.user_id;
+
+          return (
+            <div key={m.id} className="mb-1">
+              <div className="text-xs text-gray-700">
+                {resNo} {m.name || "名無し"} ID:{uid}{" "}
+                {new Date(m.created_at).toLocaleString()}
+                {canDelete && (
+                  <button
+                    onClick={() => deleteMessage(m.id)}
+                    className="ml-2 text-red-600"
+                  >
+                    削除
+                  </button>
+                )}
+              </div>
+              <div className="pl-4">{m.body}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="border-t px-4 py-2">
+        {!user && (
+          <p className="text-xs text-red-600">
+            ログインしてください
+          </p>
+        )}
+
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="表示名（任意）"
+          className="mb-1 w-full rounded border px-3 py-1 text-xs"
+        />
+
+        <div className="flex gap-2">
+          <input
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder="Enterで送信"
+            className="flex-1 rounded border px-3 py-2"
+            disabled={!user}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!user}
+            className="rounded border px-4 disabled:opacity-50"
+          >
+            送信
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
