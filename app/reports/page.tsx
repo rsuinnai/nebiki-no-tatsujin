@@ -68,7 +68,7 @@ export default async function ReportsPage({
           {reports?.map((report) => (
             <Link
               key={report.id}
-              href={`/stores/${report.stores?.id}`}
+              href={`/stores/${report.stores?.[0]?.id}`}
               className="block rounded-lg bg-white p-4 shadow hover:bg-gray-50 transition"
             >
               <p className="font-semibold text-gray-800">
