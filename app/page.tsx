@@ -50,8 +50,7 @@ export default async function HomePage() {
   const latestByStore = new Map<number, any>();
 
   boardPosts?.forEach((post) => {
-    if (!latestByStore.has(post.store_id) && post.stores?.id) {
-      latestByStore.set(post.store_id, post);
+if (!latestByStore.has(post.store_id) && post.stores?.[0]?.id) {      latestByStore.set(post.store_id, post);
     }
   });
 
