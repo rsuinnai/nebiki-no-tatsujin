@@ -88,10 +88,10 @@ if (!latestByStore.has(post.store_id) && post.stores?.[0]?.id) {      latestBySt
                 className="flex items-center justify-between border-b pb-2 last:border-none"
               >
                 <Link
-                  href={`/stores/${report.stores?.id}`}
+                  href={`/stores/${report.stores?.[0]?.id}`}
                   className="font-medium text-gray-800 hover:underline"
                 >
-                  {report.stores?.name ?? "店舗不明"}
+                 {report.stores?.[0]?.name ?? "店舗不明"}
                 </Link>
 
                 <Link
