@@ -24,8 +24,7 @@ export default async function BoardPage() {
   const latestByStore = new Map();
 
   data?.forEach((row) => {
-    if (!latestByStore.has(row.store_id) && row.stores?.id) {
-      latestByStore.set(row.store_id, row);
+if (!latestByStore.has(row.store_id) && row.stores?.[0]?.id) {      latestByStore.set(row.store_id, row);
     }
   });
 
