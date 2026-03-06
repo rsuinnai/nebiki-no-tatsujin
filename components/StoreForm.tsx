@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/src/lib/supabase";
 
 export default function StoreForm() {
-  const supabase = createClient();
 
   const [storeName, setStoreName] = useState("");
   const [chain, setChain] = useState("");
