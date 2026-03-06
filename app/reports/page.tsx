@@ -72,7 +72,7 @@ export default async function ReportsPage({
               className="block rounded-lg bg-white p-4 shadow hover:bg-gray-50 transition"
             >
               <p className="font-semibold text-gray-800">
-                {report.stores?.name}
+              {report.stores?.[0]?.name}
               </p>
 
               <p className="text-sm text-gray-600 mt-1">
