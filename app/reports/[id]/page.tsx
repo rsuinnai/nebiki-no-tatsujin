@@ -36,13 +36,13 @@ export default async function ReportDetailPage({ params }: Props) {
     );
   }
 
-  const storeId = report.stores?.id;
-
+  const storeId = report.stores?.[0]?.id;
+  
   return (
     <main className="mx-auto max-w-xl space-y-6 px-4 py-10">
       {/* 店舗名 */}
       <h1 className="text-xl font-bold">
-        {report.stores?.name ?? "店舗不明"}
+        {report.stores?.[0]?.name ?? "店舗不明"}
       </h1>
       <Link
   href={`/stores/${report.stores.id}`}
