@@ -37,20 +37,20 @@ export default async function ReportDetailPage({ params }: Props) {
   }
 
   const storeId = report.stores?.[0]?.id;
-  
+
   return (
     <main className="mx-auto max-w-xl space-y-6 px-4 py-10">
       {/* 店舗名 */}
       <h1 className="text-xl font-bold">
         {report.stores?.[0]?.name ?? "店舗不明"}
       </h1>
-      <Link
-  href={`/stores/${report.stores.id}`}
-  className="inline-block text-sm text-blue-600 hover:underline"
->
-  この店舗の掲示板を見る
-</Link>
 
+      <Link
+        href={`/stores/${report.stores?.[0]?.id}`}
+        className="inline-block text-sm text-blue-600 hover:underline"
+      >
+        この店舗の掲示板を見る
+      </Link>
 
       {/* 値引き時間 */}
       <div className="text-3xl font-bold text-blue-600">
@@ -79,7 +79,6 @@ export default async function ReportDetailPage({ params }: Props) {
           >
             この店舗の掲示板を見る
           </Link>
-
         </div>
       )}
     </main>
