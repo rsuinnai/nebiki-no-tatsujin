@@ -37,7 +37,7 @@ export default function StoreBoardPage() {
     const checkAdmin = async () => {
       const { data } = await supabase.auth.getUser();
       const userId = data.user?.id;
-      if (isAdmin(userId)) setAdmin(true);
+      if (isAdmin()) setAdmin(true);
     };
     checkAdmin();
   }, []);
