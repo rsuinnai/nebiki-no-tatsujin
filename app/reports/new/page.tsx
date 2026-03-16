@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "../../../src/lib/supabase";
+import { useEffect, useState } from "react";
+import { supabase } from "@/src/lib/supabase";
 
 type Store = {
   id: number;
@@ -23,51 +22,80 @@ export default function NewReportPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("stores")
-      .select("id, name")
-      .order("name")
-      .then(({ data }) => {
-        setStores(data ?? []);
-      });
+    loadStores();
   }, []);
+
+  async function loadStores() {
+    const { data, error } = await supabase
+      .from("stores")
+      .select("id,name")
+      .order("name");
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setStores(data ?? []);
+  }
 
   const handleSubmit = async () => {
     setLoading(true);
 
-    let finalStoreId = storeId || null;
+    try {
+      let finalStoreId = storeId;
+      const name = newStoreName.trim();
 
-    // 店舗が未選択で、新規店舗名がある場合
-    if (!finalStoreId && newStoreName) {
-      const { data: store, error } = await supabase
-        .from("stores")
-        .insert({ name: newStoreName })
-        .select()
-        .single();
-
-      if (error) {
-        alert(error.message);
+      if (!finalStoreId && !name) {
+        alert("店舗を選択するか新しい店舗名を入力してください");
         setLoading(false);
         return;
       }
 
-      finalStoreId = store.id;
-    }
+      // 新規店舗作成
+      if (!finalStoreId && name) {
+        const { data: store, error } = await supabase
+          .from("stores")
+          .insert({
+            name: name,
+            chain: null,
+          })
+          .select()
+          .single();
 
-    const { error } = await supabase.from("reports").insert({
-      store_id: finalStoreId,
-      discount_date: date,
-      discount_time: time,
-      prefecture,
-      city,
-      comment,
-    });
+        if (error) {
+          console.error("store insert error", error);
+          alert("店舗作成エラー");
+          setLoading(false);
+          return;
+        }
 
-    if (error) {
-      alert(error.message);
-    } else {
-      alert("投稿しました");
-      location.href = "/reports";
+        finalStoreId = store.id;
+      }
+
+      // レポート投稿
+      const { error } = await supabase.from("reports").insert({
+        store_id: finalStoreId,
+        discount_date: date || null,
+        discount_time: time || null,
+        prefecture: prefecture || null,
+        city: city || null,
+        comment: comment || null,
+      });
+
+      if (error) {
+        console.error("report insert error", error);
+        alert("投稿エラー");
+        setLoading(false);
+        return;
+      }
+
+      alert("投稿しました！");
+      window.location.href = "/reports";
+
+    } catch (err) {
+      console.error(err);
+      alert("エラーが発生しました");
     }
 
     setLoading(false);
@@ -77,7 +105,6 @@ export default function NewReportPage() {
     <main className="max-w-xl mx-auto px-4 py-6 space-y-4">
       <h1 className="text-xl font-bold">値引き情報を投稿</h1>
 
-      {/* 店舗選択 */}
       <div>
         <label className="block text-sm font-medium">店舗</label>
         <select
@@ -96,11 +123,8 @@ export default function NewReportPage() {
         </select>
       </div>
 
-      {/* 新規店舗 */}
       <div>
-        <label className="block text-sm font-medium">
-          店舗がない場合（新規）
-        </label>
+        <label className="block text-sm font-medium">店舗がない場合</label>
         <input
           className="w-full border rounded px-3 py-2"
           value={newStoreName}
@@ -109,7 +133,6 @@ export default function NewReportPage() {
         />
       </div>
 
-      {/* 日付 */}
       <div>
         <label className="block text-sm font-medium">値引き日</label>
         <input
@@ -120,11 +143,8 @@ export default function NewReportPage() {
         />
       </div>
 
-      {/* 時間 */}
       <div>
-        <label className="block text-sm font-medium">
-          開始時間（目安）
-        </label>
+        <label className="block text-sm font-medium">開始時間</label>
         <input
           type="time"
           className="w-full border rounded px-3 py-2"
@@ -133,7 +153,6 @@ export default function NewReportPage() {
         />
       </div>
 
-      {/* 地域 */}
       <div className="flex gap-2">
         <input
           className="flex-1 border rounded px-3 py-2"
@@ -149,9 +168,8 @@ export default function NewReportPage() {
         />
       </div>
 
-      {/* コメント */}
       <div>
-        <label className="block text-sm font-medium">投稿者コメント</label>
+        <label className="block text-sm font-medium">コメント</label>
         <textarea
           className="w-full border rounded px-3 py-2"
           rows={3}
