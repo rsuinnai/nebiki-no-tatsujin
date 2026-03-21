@@ -22,6 +22,7 @@ type BoardPost = {
   content: string;
   created_at: string;
   store_id: number | null;
+  image_url: string | null; // ← 追加
 };
 
 export default function HomePage() {
@@ -32,6 +33,9 @@ export default function HomePage() {
 
   const [reportExpanded, setReportExpanded] = useState(false);
   const [boardExpanded, setBoardExpanded] = useState(false);
+
+  // 画像拡大用
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const holiday = isHolidayToday();
 
@@ -54,7 +58,7 @@ export default function HomePage() {
 
     const { data: boardData } = await supabase
       .from("store_messages")
-      .select("id,content,created_at,store_id")
+      .select("id,content,created_at,store_id,image_url") // ← 追加
       .not("store_id", "is", null)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -72,15 +76,11 @@ export default function HomePage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "reports" },
         (payload) => {
-
           const newReport = payload.new as Report;
-
           setReports((prev) => [newReport, ...prev]);
-
         }
       )
       .subscribe();
-
 
     supabase
       .channel("board-realtime")
@@ -88,15 +88,11 @@ export default function HomePage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "store_messages" },
         (payload) => {
-
           const newPost = payload.new as BoardPost;
-
           setBoardPosts((prev) => [newPost, ...prev]);
-
         }
       )
       .subscribe();
-
   }
 
   function getStoreName(store_id: number | null) {
@@ -129,8 +125,6 @@ export default function HomePage() {
           </p>
 
         </div>
-
-
 
         {/* 今日の値引き */}
 
@@ -189,11 +183,9 @@ export default function HomePage() {
                     </div>
 
                     <div className="text-2xl font-bold text-blue-600">
-
                       {report.discount_time
                         ? report.discount_time.slice(0,5)
                         : "--:--"}
-
                     </div>
 
                   </div>
@@ -207,25 +199,17 @@ export default function HomePage() {
           </div>
 
           {reports.length > 5 && (
-
             <div className="mt-4 text-center">
-
               <button
                 onClick={() => setReportExpanded(!reportExpanded)}
                 className="text-blue-600 hover:underline"
               >
-
                 {reportExpanded ? "折りたたむ" : "もっと見る"}
-
               </button>
-
             </div>
-
           )}
 
         </section>
-
-
 
         {/* 掲示板 */}
 
@@ -262,24 +246,34 @@ export default function HomePage() {
 
                 <li key={post.id}>
 
-                  <Link
-                    href={`/stores/${post.store_id}`}
-                    className="block rounded-lg border p-4 hover:bg-gray-50"
-                  >
+                  <div className="block rounded-lg border p-4">
 
-                    <p className="font-semibold text-gray-800">
-                      {storeName}
-                    </p>
+                    <Link href={`/stores/${post.store_id}`}>
 
-                    <p className="text-sm text-gray-700 mt-1 line-clamp-2">
-                      {post.content}
-                    </p>
+                      <p className="font-semibold text-gray-800">
+                        {storeName}
+                      </p>
+
+                      <p className="text-sm text-gray-700 mt-1 line-clamp-2">
+                        {post.content}
+                      </p>
+
+                    </Link>
+
+                    {/* 画像表示 */}
+                    {post.image_url && (
+                      <img
+                        src={post.image_url}
+                        className="mt-2 w-full max-h-40 object-contain rounded border cursor-pointer"
+                        onClick={() => setSelectedImage(post.image_url)}
+                      />
+                    )}
 
                     <p className="text-xs text-gray-400 mt-1">
                       {post.created_at.slice(0,16).replace("T"," ")}
                     </p>
 
-                  </Link>
+                  </div>
 
                 </li>
 
@@ -290,25 +284,30 @@ export default function HomePage() {
           </ul>
 
           {boardPosts.length > 5 && (
-
             <div className="mt-4 text-center">
-
               <button
                 onClick={() => setBoardExpanded(!boardExpanded)}
                 className="text-blue-600 hover:underline"
               >
-
                 {boardExpanded ? "折りたたむ" : "もっと見る"}
-
               </button>
-
             </div>
-
           )}
 
         </section>
 
-
+        {/* 画像拡大モーダル */}
+        {selectedImage && (
+          <div
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+            onClick={() => setSelectedImage(null)}
+          >
+            <img
+              src={selectedImage}
+              className="max-w-[90%] max-h-[90%] rounded"
+            />
+          </div>
+        )}
 
         <div className="flex gap-4">
 
@@ -338,6 +337,5 @@ export default function HomePage() {
       </div>
 
     </div>
-
   );
 }

@@ -14,6 +14,8 @@ type Report = {
   discount_time: string | null;
   created_at: string;
   store_id: number;
+  prefecture: string | null;
+  city: string | null;
 };
 
 type BoardPost = {
@@ -29,6 +31,11 @@ export default function ReportsPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [boardPosts, setBoardPosts] = useState<BoardPost[]>([]);
 
+  // 🔽 追加（検索用）
+  const [keyword, setKeyword] = useState("");
+  const [prefFilter, setPrefFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+
   useEffect(() => {
     loadData();
   }, []);
@@ -41,7 +48,7 @@ export default function ReportsPage() {
 
     const { data: reportData } = await supabase
       .from("reports")
-      .select("id,discount_time,created_at,store_id")
+      .select("id,discount_time,created_at,store_id,prefecture,city")
       .order("created_at", { ascending: false });
 
     const { data: boardData } = await supabase
@@ -66,25 +73,63 @@ export default function ReportsPage() {
     return post ? post.content : null;
   }
 
+  // 🔽 フィルター処理
+  const filteredReports = reports.filter((report) => {
+    const storeName = getStoreName(report.store_id);
+
+    if (keyword && !storeName.includes(keyword)) return false;
+    if (prefFilter && report.prefecture !== prefFilter) return false;
+    if (cityFilter && report.city !== cityFilter) return false;
+
+    return true;
+  });
+
   return (
 
     <div className="min-h-screen bg-gray-50 px-4 py-10">
 
       <div className="mx-auto max-w-2xl">
 
-        <h1 className="text-2xl font-bold mb-6">
+        <h1 className="text-2xl font-bold mb-4">
           値引き店舗一覧
         </h1>
 
-        {reports.length === 0 && (
+        {/* 🔽 検索UI */}
+        <div className="mb-6 space-y-2">
+
+          <input
+            className="w-full border rounded px-3 py-2"
+            placeholder="店舗名で検索（例：イオン）"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+
+          <div className="flex gap-2">
+            <input
+              className="flex-1 border rounded px-3 py-2"
+              placeholder="都道府県"
+              value={prefFilter}
+              onChange={(e) => setPrefFilter(e.target.value)}
+            />
+            <input
+              className="flex-1 border rounded px-3 py-2"
+              placeholder="市区町村"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+            />
+          </div>
+
+        </div>
+
+        {filteredReports.length === 0 && (
           <p className="text-gray-500">
-            まだ投稿がありません
+            条件に合う投稿がありません
           </p>
         )}
 
         <div className="space-y-3">
 
-          {reports.map((report) => {
+          {filteredReports.map((report) => {
 
             const storeName = getStoreName(report.store_id);
             const lastComment = getLastComment(report.store_id);
