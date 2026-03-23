@@ -31,7 +31,6 @@ export default function ReportsPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [boardPosts, setBoardPosts] = useState<BoardPost[]>([]);
 
-  // 🔽 追加（検索用）
   const [keyword, setKeyword] = useState("");
   const [prefFilter, setPrefFilter] = useState("");
   const [cityFilter, setCityFilter] = useState("");
@@ -73,7 +72,6 @@ export default function ReportsPage() {
     return post ? post.content : null;
   }
 
-  // 🔽 フィルター処理
   const filteredReports = reports.filter((report) => {
     const storeName = getStoreName(report.store_id);
 
@@ -90,11 +88,18 @@ export default function ReportsPage() {
 
       <div className="mx-auto max-w-2xl">
 
+        {/* ← トップに戻るボタン追加 */}
+        <Link
+          href="/"
+          className="inline-block mb-4 text-blue-600 hover:underline"
+        >
+          ← トップに戻る
+        </Link>
+
         <h1 className="text-2xl font-bold mb-4">
           値引き店舗一覧
         </h1>
 
-        {/* 🔽 検索UI */}
         <div className="mb-6 space-y-2">
 
           <input
